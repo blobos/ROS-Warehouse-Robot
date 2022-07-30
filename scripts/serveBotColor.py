@@ -63,9 +63,19 @@ def solicit():
 
 def goto(waypoint):
     global client
+    global state_label
     
     goal = goal_pose(waypoints[waypoint])
     client.send_goal(goal)
+    if waypoint in range(0,3):
+        state_label = "In_customer_delivery"
+        print(state_label)
+    elif waypoint == 4:
+        state_label = "Going_to_kitchen"
+        print(state_label)
+    elif waypoint ==  5:
+        state_label = "Going_to_charging"
+        print(state_label)
     # client.wait_for_result()
 
 
@@ -95,48 +105,32 @@ def actionFollow(msg):
     global state_label
     global goal
 
-    if msg.data == 'a': 
+    if msg.data == 'a' or 'b' or 'c' or 'd': 
         goto(4)
-        if client.get_state == 3:
-            print("at kitchen")
-            print("publish confirm_A?")
-            confirm_pub.publish("confirm_A")
+        print(state_label)
+
+    elif state == "At_kitchen" and msg.data == 'a':
+        print("at kitchen: A")
+        confirm_pub.publish("confirm_A")
+
     elif msg.data == 'toA':
-        state_label = "In_customer_delivery"
         confirm_pub.publish("")
         print("A confirmed")
         goto(0)
-        # rospy.sleep(2)
-        # goto(4)
 
-    elif msg.data == 'b':
-        goto(4)
-        print("at Kitchen")
-        print("publish confirm_B")
-        confirm_pub.publish("confirm_B")
+
     elif msg.data == 'toB':
         confirm_pub.publish("")
-        state_label = "In_customer_delivery"
         print("B confirmed")
         goto(1)
         # rospy.sleep(2)
         # goto(4)
 
-    elif msg.data == 'c':
-        goto(4)
-        print("at Kitchen")
-        print("publish confirm_C")
-        confirm_pub.publish("confirm_C")
     elif msg.data == 'toC':
         state_label = "In_customer_delivery"
         print("C confirmed")
         goto(2)
 
-    elif msg.data == 'd':
-        goto(4)
-        print("at Kitchen")
-        print("publish confirm_D?")
-        confirm_pub.publish("confirm_D")
     elif msg.data == 'toD':
         state_label = "In_customer_delivery"
         print("D confirmed")
