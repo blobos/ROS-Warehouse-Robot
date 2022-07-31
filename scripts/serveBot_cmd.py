@@ -1,7 +1,7 @@
 #! /usr/bin/env python3
 
 import rospy
-from std_msgs.msg import Bool, String, Int32
+from std_msgs.msg import String, UInt8
 
 start_ = True
 
@@ -9,7 +9,7 @@ goal = ''
 # prev_cmd = '' #for remote confirmation of delivery
 
 
-# def Confirm(msg):
+# def Confirm(msg): #for remote confirmation
 #     global prev_cmd
 #     if msg.data:
 #         print("prev_cmd", prev_cmd)
@@ -67,6 +67,13 @@ def menu(msg):
             pub.publish('change')
         elif cmd == 'SOLICIT':
             # prev_cmd = cmd
+            cmd = int(input ("Enter number loops to run for soliciting (0 for infinite): ")) *4
+            if cmd == 0:
+                print(0)
+                pub_solicit_count.publish(9999)    
+            else:
+                # print(cmd)
+                pub_solicit_count.publish(cmd)
             cmd = input("Enter advertising message: ")
             pub.publish('solicit')
             pub_solicit.publish(cmd)
@@ -86,10 +93,17 @@ def startMessage():
     # print(start_==True) #startup check
     if start_ == True:
         cmd = input('Enter Manager username to begin: ')
-        pub.publish("start")
-        print("\n")
-        print("Welcome", cmd)
-        start_ = False
+        while True:
+            pwd = input('Enter password: ')
+            if pwd == 'password':
+                pub.publish("start")
+                print("\n")
+                print("Welcome", cmd)
+                start_ = False
+                break
+            else: print("Wrong password")
+
+        
 
 
 
@@ -100,6 +114,7 @@ if __name__ == '__main__':
     pub = rospy.Publisher("commands", String, queue_size=1)
     sub_state = rospy.Subscriber("state", String, StateRec)
     pub_solicit = rospy.Publisher("solicit_message", String, queue_size=1)
+    pub_solicit_count = rospy.Publisher("solicit_count", UInt8, queue_size=1)
     # sub_confirm = rospy.Subscriber("confirm", String, Confirm) #remote_confirm
 
     startMessage()

@@ -2,22 +2,22 @@
 
 import rospy
 import actionlib
-from std_msgs.msg import Bool, String
+from std_msgs.msg import String, UInt8
 from move_base_msgs.msg import MoveBaseAction, MoveBaseGoal
 
 waypoints = [
     # 0 A Left Top
-    [(-5.9, 2.7, 0.0), (0.0, 0.0, -1, 0.0)],
+    [(-5.996887683868408, 2.647653579711914, 0.0), (0.0, 0.0, -0.004327434578415631, 0.9999906366111483)],
     # 1 B Right Top
-    [(5.0, 5.0, 0.0), (0.0, 0.0, -5, 1.0)],
+    [(5.017152786254883, 4.9510393142700195, 0.0), (0.0, 0.0, -0.9995205068464919, 0.030963791649797106)],
     # 2 C Left Bottom
-    [(-5.0, 0.5, 0.0), (0.0, 0.0, 1.0, 0.0)],
+    [(-5.948310852050781, 0.5047111511230469, 0.0), (0.0, 0.0, 0.0076742825228511445, 0.9999705522602951)],
     # 3 D Right Bottom
-    [(5.5, 2.3, 0.0), (0.0, 0.0, 0, 1.0)],
+    [(4.877748012542725, 2.6365699768066406, 0.0), (0.0, 0.0, -0.9998994280032624, 0.01418216763223549)],
     # 4 Kitchen
-    [(5.5, 2.3, 0.0), (0.0, 0.0, 0, 1.0)],
+    [(3.0324013233184814, -5.3826069831848145, 0.0), (0.0, 0.0, 0.0037359962408318255, 0.999993021141692)],
     # 5 Charging Station
-    [(7.8, -8.4, 0.0), (0.0, 0.0, -1, 0.0)],
+    [(8.419149398803711, -8.167566299438477, 0.0), (0.0, 0.0, -0.9997717846494557, 0.02136301989051096)]
     # # 6 Garbage/Return/Drink Refill
     # [(4, -9.3, 0.0), (0.0, 0.0, 0.7, 0.7)],
     ]
@@ -37,6 +37,7 @@ def goal_pose(pose):
 
 client = None
 solicit_bool = False
+solicit_count = 9999
 # confirm_bool = False #for remote confirm
 change_bool = False
 prev_cmd = "None"
@@ -47,10 +48,11 @@ def solicit():
     next_goal = 0
     global client
     global solicit_bool
+    global solicit_count
     global solicit_message
     global state_label
     
-    while solicit_bool == True:
+    while solicit_bool == True and solicit_count > 0:
         state_label = "Soliciting"
         goal = goal_pose(waypoints[next_goal])
         client.send_goal(goal)
@@ -61,10 +63,18 @@ def solicit():
             next_goal = 0
         else:
             next_goal = next_goal + 1
+        solicit_count -= 1
+        # print(solicit_count)
+    goto(4)
+    
 
 def Solicit_Message(msg):
     global solicit_message
     solicit_message = msg.data
+
+def Solicit_count(msg):
+    global solicit_count
+    solicit_count = msg.data
 
 def goto(waypoint):
     global client
@@ -79,18 +89,18 @@ def goto(waypoint):
     if waypoint in range(0,3):
         time_lapse = rospy.get_time() - start_time
         state_label = "In_customer_delivery"
-        rospy.loginfo(state_label)
+        # rospy.loginfo(state_label)
         if time_lapse > TIME_ALLOWED:
             client.cancel_goal()
-            goto(4)
+            goto(5)
             client.wait_for_result()
             print("Cannot deliver to seating",prev_cmd," for some reason")
     elif waypoint == 4:
         state_label = "Going_to_kitchen"
-        rospy.loginfo(state_label)
+        # rospy.loginfo(state_label)
     elif waypoint ==  5:
         state_label = "Going_to_charging"
-        rospy.loginfo(state_label)
+        # rospy.loginfo(state_label)
 
 def state_update():
     #0 pending, 1 active, 2 preempted, 3 succeeded, 4 aborted
@@ -133,26 +143,26 @@ def local_confirmation():
         if cmd.lower() == 'y':
             if prev_cmd == 'A':
                 state_label = "In_customer_delivery"
-                rospy.loginfo("Delivering to table A")
+                # rospy.loginfo("Delivering to table A")
                 goto(0)
                 client.wait_for_result()
                 
 
             elif prev_cmd == 'B':
                 state_label = "In_customer_delivery"
-                rospy.loginfo("Delivering to table B")
+                # rospy.loginfo("Delivering to table B")
                 goto(1)
                 client.wait_for_result()
 
             elif prev_cmd == 'C':
                 state_label = "In_customer_delivery"
-                rospy.loginfo("Delivering to table C")
+                # rospy.loginfo("Delivering to table C")
                 goto(2)
                 client.wait_for_result()
 
             elif prev_cmd == 'D':
                 state_label = "In_customer_delivery"
-                rospy.loginfo("Delivering to table D")
+                # rospy.loginfo("Delivering to table D")
                 goto(3)
                 client.wait_for_result()
 
@@ -184,17 +194,18 @@ def actionFollow(msg):
 
     elif msg.data == 'change':
         change_bool = True
-        rospy.loginfo("Changing order")
+        # rospy.loginfo("Changing order")
         client.cancel_goal()
         goto(4)
         client.wait_for_result()
         
     elif msg.data == 'solicit':
-        print("Soliciting")
+        prev_cmd = msg.data
+        # rospy.loginfo("Soliciting")
         solicit_bool = True
 
     elif msg.data == 'state':
-        print(state_label, prev_cmd, client.get_state())
+        # rospy.loginfo(state_label, prev_cmd, client.get_state())
         state_pub.publish(state_label)
 
     elif msg.data == 'start':
@@ -209,6 +220,7 @@ if __name__ == '__main__':
     print("Robot initiated")
     rospy.Subscriber("commands", String, actionFollow)
     rospy.Subscriber("solicit_message", String, Solicit_Message)
+    rospy.Subscriber("solicit_count", UInt8, Solicit_count)
 
     main_pub = rospy.Publisher("main_menu", String, queue_size=1)
     state_pub = rospy.Publisher("state", String, queue_size=1)
