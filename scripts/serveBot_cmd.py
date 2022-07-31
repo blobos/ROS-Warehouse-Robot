@@ -6,131 +6,82 @@ from std_msgs.msg import Bool, String, Int32
 start_ = True
 
 goal = ''
-cmd = ''
-submenu_ = False
+# prev_cmd = '' #for remote confirmation of delivery
+
+
+# def Confirm(msg):
+#     global prev_cmd
+#     if msg.data:
+#         print("prev_cmd", prev_cmd)
+#         if prev_cmd == ('A' or 'B' or 'C' or 'D'):
+#             prompt = String("Enter 'y' to confirm order to ", prev_cmd)
+#             cmd = input(prompt)
+#             if cmd.lower() == 'y':
+#                 sendGoal(msg)
+#     menu(msg)
+
+
 def sendGoal(ABCD):
-    if goal == 'a':
+    if goal == 'A':
         print("publish toA")
         pub.publish("toA")
-    if goal == 'b':
+    if goal == 'B':
         print("publish toB")
         pub.publish("toB")
-    if goal == 'c':
+    if goal == 'C':
         print("publish toC")
         pub.publish("toC")
-    if goal == '':
+    if goal == 'D':
         print("publish toD")
         pub.publish("toD")
 
-""" def goal_confirm(ABCD):
-    global goal
-    global submenu_
-    goal = ABCD.upper()
-    cmd_confirm = input("\ Enter 'Y' to send robot to ", goal, ": ")
-    if cmd_confirm == 'y':
-        print("confirmation sent")
-        print("sending bot to ", goal)
-        sendGoal(goal)
-    submenu_ = False  """
+
+
+def StateRec(msg):
+    if msg.data:
+        print("\n STATE:", msg.data)
+        menu(msg)
+    
+
 
 def menu(msg):
     global start_
     global goal
-    global cmd
-    global submenu_
-    # while not rospy.is_shutdown():
-    
-#confirmation
-    if submenu_:
-        if msg.data == "confirm_A":
-            cmd_confirm = input("\n Enter 'Y' to send robot to A:").lower()
-            goal = 'a'
-            if cmd_confirm == 'y':
-                sendGoal(goal)    
-            submenu_ = False    
-            
-        elif msg.data == "confirm_B" :
-            cmd_confirm = input("\n Enter 'Y' to send robot to B:")
-            goal = 'b'
-            if cmd_confirm == 'y':
-                print("confirmation sent")
-                print("sending bot to ", goal)
-                sendGoal(goal)
-            submenu_ = False    
-
-        elif msg.data == "confirm_C":
-            cmd_confirm = input("\n Enter 'Y' to send robot to C:")
-            goal = 'b'
-            if cmd_confirm == 'y':
-                print("confirmation sent")
-                print("sending bot to ", goal)
-                sendGoal(goal)                 
-            submenu_ = False    
-
-        elif msg.data == "confirm_D":
-            cmd_confirm = input("\n Enter 'Y' to send robot to D:")
-            goal = 'd'
-            if cmd_confirm == 'y':
-                print("confirmation sent")
-                print("sending bot to ", goal)
-                sendGoal(goal)  
-            submenu_ = False   
-
-        # elif msg.data == 'state_feedback':
-        #     print("state_fb_received")
-        #     print(msg.data)
-        #     submenu_ = False
-    
-
-    if msg.data == ("At_kitchen" or "At_charger" or "In_customer_delivery"):
-        print(msg.data)
-        
-    print("last cmd bot received: ", msg.data)
-
-    
-    cmd = input("\nEnter one of the following commands:\n \
-'A', 'B', 'C', or 'D' to order to respective table\n \
-'Cancel' to cancel current order and return to station\n \
-'Change' to change current order\n \
-'Solicit' to advertise to special to customers\n \
-'State' to query current robot state\n \
-Command: ").lower()
-    if cmd == 'a':
-        pub.publish('a')
-        submenu_ = True
-        # break
-    elif cmd == 'b':
-        pub.publish('b')
-        submenu_ = True
-        # break
-    elif cmd == 'c':
-        pub.publish('c')
-        submenu_ = True
-        # break
-    elif cmd == 'd':
-        pub.publish('d')
-        submenu_ = True
-        # break
-    elif cmd == 'cancel':
-        pub.publish('cancel')
-    elif cmd == 'change':
-        pub.publish('change')
-    elif cmd == 'solicit':
-        pub.publish('solicit')
-    elif cmd == 'state':
-        pub.publish('state')  
-        # submenu_ = True 
-    # elif cmd == 'y':
-    #     print("confirmation sent")
-    #     print("sending bot to ", goal)
-    #     sendGoal(goal)        
-    else: 
-        print("Command not recognized. Please enter again")
-    #confirm
+    # global prev_cmd
+    while True:
+        cmd = input("\nEnter one of the following commands:\n \
+    'A', 'B', 'C', or 'D' to order to respective table\n \
+    'Cancel' to cancel current order and return to station\n \
+    'Change' to change current order\n \
+    'Solicit' to advertise to special to customers\n \
+    'State' to query current robot state\n \
+    Command: ").upper()
+        if cmd in 'ABCD':
+            pub.publish(cmd)
+            # prev_cmd = cmd
+        elif cmd == 'CANCEL':
+            # prev_cmd = cmd
+            pub.publish('cancel')
+        elif cmd == 'CHANGE':
+            # prev_cmd = cmd
+            pub.publish('change')
+        elif cmd == 'SOLICIT':
+            # prev_cmd = cmd
+            cmd = input("Enter advertising message: ")
+            pub.publish('solicit')
+            pub_solicit.publish(cmd)
+        elif cmd == 'STATE':
+            ##not navigation command so no prev_cmd
+            pub.publish('state')  
+            break    
+        else: 
+            print("Command not recognized. Please enter again")
+        #confirm
         # rospy.spin()
 
 
-def start():
+
+def startMessage():
     global start_
     # print(start_==True) #startup check
     if start_ == True:
@@ -145,9 +96,12 @@ def start():
 if __name__ == '__main__':
 
     rospy.init_node('restaurant_robot_controller')
-    sub = rospy.Subscriber("state_confirm", String, menu)
+    sub = rospy.Subscriber("main_menu", String, menu)
     pub = rospy.Publisher("commands", String, queue_size=1)
+    sub_state = rospy.Subscriber("state", String, StateRec)
+    pub_solicit = rospy.Publisher("solicit_message", String, queue_size=1)
+    # sub_confirm = rospy.Subscriber("confirm", String, Confirm) #remote_confirm
 
-    start()
+    startMessage()
 
     rospy.spin()
