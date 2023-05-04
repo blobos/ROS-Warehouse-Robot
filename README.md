@@ -1,4 +1,4 @@
-# cis421_project1
+# ROS Warehouse Robot
 Scripts for ROS robot with robot arm:
 
 This scenario mimics a shipping warehouse environment. In this scenario, the robot picks up a crate of products and transports them from their respective storage locations to the loading station. There is also a charging station. 
